@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/WeGoTogether/pravatar/diskstore"
 	"github.com/gorilla/mux"
@@ -10,51 +9,56 @@ import (
 	"net/http"
 )
 
-const (
-	defaultPort = "3333"
-	defaultHost = ""
-	defaultDir  = "images"
-)
+type Pravatar struct {
+	Host   string
+	Port   string
+	Dir    string
+	store  *diskstore.DiskStore
+	router *mux.Router
+}
 
-var router = mux.NewRouter()
-var store *diskstore.DiskStore
-var host = defaultHost
-var port = defaultPort
-var dir = defaultDir
+func NewPravatar(host string, port string, store *diskstore.DiskStore) *Pravatar {
+	var p = &Pravatar{Host: host, Port: port, store: store}
+	var router = mux.NewRouter()
 
-func GetAvatarHandler(writer http.ResponseWriter, request *http.Request) {
-	vars := mux.Vars(request)
-	fmt.Fprintf(writer, "Get Avatar with hash %s received\n", vars["hash"])
-	var file, err = store.Get(vars["hash"])
-	if err != nil {
-		log.Fatal(err)
+	p.router = router
+
+	p.initializeRouter()
+
+	return p
+}
+
+func (p *Pravatar) initializeRouter() {
+	p.router.HandleFunc("/avatar/{hash}", p.getAvatarHandler()).Methods("GET")
+	// router.HandleFunc("/avatar/{hash}", GetAvatarHandler).Methods("GET")
+	p.router.HandleFunc("/avatar/{hash}", p.postAvatarHandler()).Methods("POST")
+}
+
+func (pravatar *Pravatar) getAvatarHandler() func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		vars := mux.Vars(request)
+		fmt.Fprintf(writer, "Get Avatar with hash %s received\n", vars["hash"])
+		var file, err = pravatar.store.Get(vars["hash"])
+		if err != nil {
+			log.Fatal(err)
+		}
+		io.Copy(writer, file)
 	}
-	io.Copy(writer, file)
 }
 
-func PostAvatarHandler(writer http.ResponseWriter, request *http.Request) {
-	vars := mux.Vars(request)
-	fmt.Fprintf(writer, "Post Avatar with hash %s received\n", vars["hash"])
+func (pravatar *Pravatar) postAvatarHandler() func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		vars := mux.Vars(request)
+		fmt.Fprintf(writer, "Post Avatar with hash %s received\n", vars["hash"])
+	}
 }
 
-func init() {
-	flag.StringVar(&port, "port", defaultPort, "port on which to listen")
-	flag.StringVar(&host, "host", defaultHost, "host on which to listen")
-	flag.StringVar(&dir, "dir", defaultDir, "root dir for images")
-
-	router.HandleFunc("/avatar/{hash}", GetAvatarHandler).Methods("GET")
-	router.HandleFunc("/avatar/{hash}", PostAvatarHandler).Methods("POST")
-}
-
-func main() {
-	flag.Parse()
-	var hostAndPort = host + ":" + port
+func (p *Pravatar) Listen() {
+	var hostAndPort = p.Host + ":" + p.Port
 
 	log.Printf("Listening on %s", hostAndPort)
-	log.Printf("Images root dir is %s", dir)
+	log.Printf("Images root dir is %s", p.store.Dir)
 
-	store = diskstore.NewStore(dir)
-
-	http.Handle("/", router)
+	http.Handle("/", p.router)
 	http.ListenAndServe(hostAndPort, nil)
 }
