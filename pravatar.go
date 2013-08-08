@@ -13,7 +13,7 @@ type Pravatar struct {
 	Host   string
 	Port   string
 	Dir    string
-	store  *diskstore.DiskStore
+	store  diskstore.Storer
 	router *mux.Router
 }
 

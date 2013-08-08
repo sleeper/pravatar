@@ -1,12 +1,17 @@
 package diskstore
 
 import (
-	// "io"
+  "io"
 	"log"
 	"os"
 	"path"
 	"strings"
 )
+
+type Storer interface {
+  Get(string) (io.Reader, error)
+  Put(string, []byte) (error)
+}
 
 type DiskStore struct {
 	Dir string
@@ -28,3 +33,18 @@ func (s *DiskStore) Get(hash string) (*os.File, error) {
 	}
 	return file, err
 }
+
+func (s *DiskStore) Put(name string, content []byte) (error) {
+  var file, err = os.Create(name)
+  if err != nil {
+    return err
+  }
+
+  _, err = file.Write(content)
+  if err != nil {
+    return err
+  }
+
+  return nil
+}
+
