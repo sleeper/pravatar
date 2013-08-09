@@ -53,17 +53,18 @@ func TestPut(t *testing.T) {
 
 func TestGetWithExtension(t *testing.T) {
 	var store = NewStore("tests")
-	var file, err = store.Get("foo.jpg")
+	var reader, err = store.Get("foo.jpg")
 	if err != nil {
 		t.Error("Cannot find foo.jpg")
 	}
 
-	var stat, e = file.Stat()
-	if e != nil {
-		t.Errorf("Error on stat %s", e)
-	}
+  var b []byte
+  b, _ = ioutil.ReadAll(reader)
+  var content string
 
-	if stat.Name() != "foo.jpg" {
-		t.Errorf("File %s returned instead of %s", stat.Name(), "foo")
-	}
+  content = string(b)
+
+  if content != "Not a real JPG\n\n" {
+    t.Errorf("Error in file content: %s not equal to %s", content, "Not a real JPG\n\n")
+  }
 }

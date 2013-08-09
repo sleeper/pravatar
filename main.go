@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/WeGoTogether/pravatar/diskstore"
+  "log"
 )
 
 const (
@@ -27,6 +28,8 @@ func main() {
 
 	var store = diskstore.NewStore(dir)
 	var server = NewPravatar(host, port, store)
+
+	log.Printf("Images root dir is %s", store.Dir)
 
 	server.Listen()
 }

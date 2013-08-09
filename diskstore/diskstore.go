@@ -21,7 +21,7 @@ func NewStore(dir string) *DiskStore {
 	return &DiskStore{Dir: dir}
 }
 
-func (s *DiskStore) Get(hash string) (*os.File, error) {
+func (s *DiskStore) Get(hash string) (io.Reader, error) {
 
 	var name = hash
 	if !strings.HasSuffix(name, ".jpg") {
