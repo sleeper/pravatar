@@ -10,7 +10,8 @@ import (
 )
 
 type mockStore struct {
-  Dir string
+  Key string
+  Content string
 }
 
 func (s* mockStore) Get(hash string) (io.Reader, error) {
@@ -24,19 +25,18 @@ func (s* mockStore) Get(hash string) (io.Reader, error) {
 
 
 func (s* mockStore) Put(name string, content []byte) (error) {
+  s.Key = name
+  s.Content = string(content)
   return nil
 }
 
 func newMockStore() *mockStore {
-  return &mockStore{Dir: "dummy"}
+  return &mockStore{Key: "", Content: ""}
 }
 
 func TestGetAvatar(t *testing.T) {
   var store = newMockStore()
   var pravatar = NewPravatar("", "3333", store)
-
-  dummy := httptest.NewServer(pravatar.Router)
-  defer dummy.Close()
 
   var req, err = http.NewRequest("GET", "/avatar/foobarbaz", nil)
   if err != nil {
@@ -46,79 +46,43 @@ func TestGetAvatar(t *testing.T) {
   rw := httptest.NewRecorder()
   rw.Body = new(bytes.Buffer)
 
-//  dummy.ServeHTTP(rw, req)
   pravatar.Router.ServeHTTP(rw, req)
 
   if rw.Code != 200 {
-    t.Errorf("www.example.com/avatar/foobarbaz: code = %d, want %d", rw.Code, 200)
+    t.Errorf("GET /avatar/foobarbaz: code = %d, want %d", rw.Code, 200)
   }
 
   if rw.Body.String() != "this is an image" {
-    t.Errorf("www.example.com/avatar/foobarbaz: body = %q, want \"this is an image\"", rw.Body.String())
+    t.Errorf("GET /avatar/foobarbaz: body = %q, want \"this is an image\"", rw.Body.String())
   }
-
-//  handler := pravatar.getAvatarHandler()
-//
-//  req, err := http.NewRequest("GET", "/avatar/foobarbaz", nil)
-//  if err != nil {
-//    t.Errorf("Cannot create request: %s", err)
-//  }
-//
-//  w := httptest.NewRecorder()
-//  handler(w, req)
-//  fmt.Printf("FRED ==> %s", w.Body.String())
-//
-//  if w.Body.String() != "This is an image" {
-//    t.Error("Not receiving right reader")
-//  }
 }
 
-//func TestGet(t *testing.T) {
-////  handler := func(w http.ResponseWriter, r *http.Request) {
-////
-////    w.Header().Set("Content-Type", request.contenttype)
-////    io.WriteString(w, request.body)
-////  }
-////
-//
-//  var store = newMockStore()
-//  var pravatar = NewPravatar("", "3333", store)
-//
-//  handler := pravatar.getAvatarHandler()
-//
-//  server := httptest.NewServer(http.HandlerFunc(handler))
-//  defer server.Close()
-//
-//  resp, err := http.Get(server.URL)
-//  if err != nil {
-//    t.Fatalf("Get: %v", err)
-//  }
-//  checkBody(t, resp, twitterResponse)
-//}
-//
-//func checkBody(t *testing.T, r *http.Response, body string) {
-//  b, err := ioutil.ReadAll(r.Body)
-//  if err != nil {
-//    t.Error("reading reponse body: %v, want %q", err, body)
-//  }
-//  if g, w := string(b), body; g != w {
-//    t.Errorf("request body mismatch: got %q, want %q", g, w)
-//  }
-//}
-//
-//// func main() {
-//   handler := func(w http.ResponseWriter, r *http.Request) {
-//     http.Error(w, "something failed", http.StatusInternalServerError)
-//   }
-// 
-//   req, err := http.NewRequest("GET", "http://GETexample.com/foo", nil)
-//   if err != nil {
-//     log.Fatal(err)
-//   }
-// 
-//   w := httptesttest.NewRecorder()
-//   handler(w, req)
-// 
-//   fmt.Printf("%d - %s", w.Code, w.Body.String())
-// }
+// FIXME: Test Put without body returns an error
+
+func TestPutAvatar(t *testing.T) {
+  var store = newMockStore()
+  var pravatar = NewPravatar("", "3333", store)
+
+  var req, err = http.NewRequest("POST", "/avatar/foobarbaz", strings.NewReader("this is an image"))
+  if err != nil {
+    t.Errorf("Cannot create request: %s", err)
+  }
+
+  rw := httptest.NewRecorder()
+  rw.Body = new(bytes.Buffer)
+
+  pravatar.Router.ServeHTTP(rw, req)
+
+  if rw.Code != 200 {
+    t.Errorf("POST /avatar/foobarbaz: code = %d, want %d", rw.Code, 200)
+  }
+
+  if store.Key != "foobarbaz" {
+    t.Errorf("POST /avatar/foobarbaz: key = %q, want \"foobarbaz\"", store.Key)
+  }
+
+  if store.Content != "this is an image" {
+    t.Errorf("POST /avatar/foobarbaz: last stored = %q, want \"this is an image\"", store.Content)
+  }
+}
 

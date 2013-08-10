@@ -5,6 +5,7 @@ import (
 	"github.com/WeGoTogether/pravatar/diskstore"
 	"github.com/gorilla/mux"
 	"io"
+  "io/ioutil"
 	"log"
 	"net/http"
 )
@@ -48,8 +49,31 @@ func (pravatar *Pravatar) getAvatarHandler() func(http.ResponseWriter, *http.Req
 
 func (pravatar *Pravatar) postAvatarHandler() func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
+    var body []byte
+    var err error
+
 		vars := mux.Vars(request)
+
+    if request.Body == nil {
+      log.Printf("Received POST request for hash %s with no body", vars["hash"])
+      return
+    }
+
+    body, err = ioutil.ReadAll(request.Body)
+
+    if err != nil {
+			log.Fatal(err)
+    }
+
+//    body := request.Body.String()
+
 		fmt.Fprintf(writer, "Post Avatar with hash %s received\n", vars["hash"])
+		fmt.Fprintf(writer, "                 body %s received\n", body)
+    err = pravatar.store.Put(vars["hash"], body)
+
+    if err != nil {
+      log.Printf("Unable to store image: %s", err)
+    }
 	}
 }
 
